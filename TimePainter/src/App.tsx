@@ -1,115 +1,192 @@
-import React, { useState, useMemo, useCallback } from "react";
-import TaskItem from "./components/TaskItem";
-import TimeSlot from "./components/TimeSlot";
-import PieChart from "./components/PieChart";
-import { Task, ScheduledTask } from "./types";
-import { CATEGORY_COLORS } from "./constants";
-import TaskManager from "./components/TaskManager";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { TaskItem } from "./components/TaskItem";
+import { TimeSlot } from "./components/TimeSlot";
+import { PieChart } from "./components/PieChart";
+import { AddTaskModal } from "./components/AddTaskModal";
+import { EditTaskModal } from "./components/EditTaskModal";
+import { AddAppointmentModal } from "./components/AddAppointmentModal";
+import { CurrentTimeIndicator } from "./components/CurrentTimeIndicator";
 
+// カテゴリごとの色設定
+export const CATEGORY_COLORS: Record<string, string> = {
+  勉強: "bg-blue-500",
+  仕事: "bg-green-500",
+  運動: "bg-red-500",
+  趣味: "bg-yellow-500",
+  その他: "bg-gray-400",
+};
 
-const generateHours = () => Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`);
+export const CATEGORY_BORDERS: Record<string, string> = {
+  勉強: "border-blue-500",
+  仕事: "border-green-500",
+  運動: "border-red-500",
+  趣味: "border-yellow-500",
+  その他: "border-gray-400",
+};
 
-const App: React.FC = () => {
-  const [tasks] = useState<Task[]>([
-    { id: 1, name: "Reactの学習", category: "学習", color: CATEGORY_COLORS["学習"], duration: 3 },
-    { id: 2, name: "プレゼン資料作成", category: "仕事", color: CATEGORY_COLORS["仕事"], duration: 2 },
-    { id: 3, name: "ジムでトレーニング", category: "運動", color: CATEGORY_COLORS["運動"], duration: 1 },
-    { id: 4, name: "読書", category: "趣味", color: CATEGORY_COLORS["趣味"], duration: 1.5 },
-    { id: 5, name: "ランチ休憩", category: "休憩", color: CATEGORY_COLORS["休憩"], duration: 1 },
-  ]);
+export interface Task {
+  id: string;
+  name: string;
+  category: string;
+  duration: number;
+}
 
-  const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
+export interface ScheduledTask extends Task {
+  startTime: string;
+}
+
+const generateHours = () =>
+  Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`);
+
+const formatDateKey = (date: Date) =>
+  date.toISOString().split("T")[0];
+
+export default function App() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [scheduledTasks, setScheduledTasks] = useState<Record<string, ScheduledTask[]>>({});
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [displayDate, setDisplayDate] = useState<Date>(new Date());
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [clickedTime, setClickedTime] = useState<string | null>(null);
+
+  // 時間更新
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // localStorage読み込み
+  useEffect(() => {
+    const savedTasks = localStorage.getItem("timePainterTasks");
+    if (savedTasks) setTasks(JSON.parse(savedTasks));
+
+    const key = `timePainterScheduled-${formatDateKey(displayDate)}`;
+    const savedScheduled = localStorage.getItem(key);
+    if (savedScheduled)
+      setScheduledTasks((prev) => ({ ...prev, [key]: JSON.parse(savedScheduled) }));
+  }, [displayDate]);
+
+  // 保存
+  useEffect(() => {
+    localStorage.setItem("timePainterTasks", JSON.stringify(tasks));
+  }, [tasks]);
+
+  useEffect(() => {
+    const key = `timePainterScheduled-${formatDateKey(displayDate)}`;
+    localStorage.setItem(key, JSON.stringify(scheduledTasks[key] || []));
+  }, [scheduledTasks, displayDate]);
 
   const hours = useMemo(() => generateHours(), []);
 
-  const handleDragStart = useCallback((e: React.DragEvent, task: Task) => {
-    setDraggedTask(task);
-    e.dataTransfer.effectAllowed = "move";
-  }, []);
+  const handleAddTask = (task: Task) => {
+    setTasks((prev) => [...prev, { ...task, id: crypto.randomUUID() }]);
+    setIsAddModalOpen(false);
+  };
 
-  const handleDrop = useCallback((hour: number) => {
+  const handleAddAppointment = (task: ScheduledTask) => {
+    const key = `timePainterScheduled-${formatDateKey(displayDate)}`;
+    setScheduledTasks((prev) => ({
+      ...prev,
+      [key]: [...(prev[key] || []), { ...task, id: crypto.randomUUID() }],
+    }));
+    setIsAppointmentModalOpen(false);
+  };
+
+  const handleUpdateTask = (task: Task) => {
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+    setIsEditModalOpen(false);
+  };
+
+  const handleDeleteTask = (id: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleDrop = (hour: string) => {
     if (!draggedTask) return;
-    const endHour = hour + draggedTask.duration;
-
-    if (endHour > 24) return;
-
-    const isCollision = scheduledTasks.some(st => {
-      const stEnd = st.startHour + st.task.duration;
-      return hour < stEnd && endHour > st.startHour;
-    });
-
-    if (isCollision) return;
-
-    const newTask: ScheduledTask = { id: Date.now(), task: draggedTask, startHour: hour };
-    setScheduledTasks(prev => [...prev, newTask].sort((a, b) => a.startHour - b.startHour));
+    const key = `timePainterScheduled-${formatDateKey(displayDate)}`;
+    setScheduledTasks((prev) => ({
+      ...prev,
+      [key]: [
+        ...(prev[key] || []),
+        { ...draggedTask, startTime: hour, id: crypto.randomUUID() },
+      ],
+    }));
     setDraggedTask(null);
-  }, [draggedTask, scheduledTasks]);
+  };
 
-  const handleTaskClick = useCallback((id: number) => {
-    setScheduledTasks(prev => prev.filter(st => st.id !== id));
-  }, []);
+  const handlePrevDay = () =>
+    setDisplayDate((d) => new Date(d.getTime() - 86400000));
 
-  const reportData = useMemo(() => {
-    const summary: Record<string, { name: string; value: number; color: string }> = {};
-    scheduledTasks.forEach(st => {
-      const { category, duration, color } = st.task;
-      if (!summary[category]) summary[category] = { name: category, value: 0, color };
-      summary[category].value += duration;
-    });
-    return Object.values(summary);
-  }, [scheduledTasks]);
+  const handleNextDay = () =>
+    setDisplayDate((d) => new Date(d.getTime() + 86400000));
 
-  
+  const handleGoToToday = () => setDisplayDate(new Date());
+
+  const dayKey = formatDateKey(displayDate);
+  const todayKey = formatDateKey(new Date());
+  const today = dayKey === todayKey;
 
   return (
-    <div className="bg-gray-100 min-h-screen p-6">
-      <header className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800">🎨 Time Painter</h1>
-        <p className="text-lg text-gray-600">時間を“塗って”、一日をデザインしよう。</p>
-      </header>
+    <div className="flex flex-col items-center p-6 min-h-screen bg-gray-100">
+      <h1 className="text-3xl font-bold mb-6">🕒 TimePainter</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="bg-white p-6 rounded-xl shadow-lg h-fit">
-          <h2 className="text-2xl font-bold mb-4 border-b pb-2">タスクリスト</h2>
-          {tasks.map(task => (
-            <TaskItem key={task.id} task={task} onDragStart={handleDragStart} />
-          ))}
-        </div>
+      <div className="flex gap-4 mb-6">
+        <div className="px-4 py-1 bg-white rounded shadow">{dayKey}</div>
+        <button onClick={handlePrevDay} className="px-3 py-1 bg-gray-300 rounded">← 前日</button>
+        <button onClick={handleGoToToday} className="px-3 py-1 bg-blue-500 text-white rounded">今日</button>
+        <button onClick={handleNextDay} className="px-3 py-1 bg-gray-300 rounded">翌日 →</button>
+        
+      </div>
 
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
-          <h2 className="text-2xl font-bold mb-4 border-b pb-2">タイムライン (Today)</h2>
-          <div>
-            {hours.map((time, index) => (
-              <div key={time} className="flex">
-                <div className="w-16 text-right pr-2 text-sm text-gray-500 -mt-2">{time}</div>
-                <div className="flex-1">
-                  <TimeSlot
-                    hour={index}
-                    scheduledTasks={scheduledTasks}
-                    onDrop={handleDrop}
-                    onDragOver={(e) => e.preventDefault()}
-                    onTaskClick={handleTaskClick}
-                  />
-                </div>
-              </div>
+      <div className="grid grid-cols-3 gap-8 w-full max-w-6xl">
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-semibold">タスク一覧</h2>
+            <button onClick={() => setIsAddModalOpen(true)} className="px-2 py-1 bg-blue-500 text-white rounded">
+              ＋追加
+            </button>
+          </div>
+          <div className="bg-white rounded-lg shadow p-3 space-y-2">
+            {tasks.map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                onEdit={() => { setEditTask(task); setIsEditModalOpen(true); }}
+                onDelete={() => handleDeleteTask(task.id)}
+                onDragStart={() => setDraggedTask(task)}
+              />
             ))}
           </div>
         </div>
 
-        <div className="min-h-screen bg-gray-50 p-6">
-          <TaskManager />
+        <div className="col-span-2 bg-white rounded-lg shadow relative">
+          {today && <CurrentTimeIndicator currentTime={currentTime} />}
+          <div className="divide-y">
+            {hours.map((hour) => (
+              <TimeSlot
+                key={hour}
+                hour={hour}
+                onDrop={() => handleDrop(hour)}
+                onClick={() => { setClickedTime(hour); setIsAppointmentModalOpen(true); }}
+                scheduledTasks={scheduledTasks[dayKey]?.filter((t) => t.startTime === hour) || []}
+              />
+            ))}
+          </div>
         </div>
-
-        <div className="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg mt-4">
-          <h2 className="text-2xl font-bold mb-4 border-b pb-2">実績レポート</h2>
-          <PieChart data={reportData} />
-        </div>
-        
       </div>
+
+      <div className="mt-8 w-full max-w-3xl bg-white rounded-lg shadow p-4">
+        <h2 className="text-lg font-semibold mb-2">カテゴリ別時間配分</h2>
+        <PieChart data={scheduledTasks[dayKey] || []} />
+      </div>
+
+      <AddTaskModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSave={handleAddTask} />
+      <EditTaskModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} task={editTask} onSave={handleUpdateTask} />
+      <AddAppointmentModal isOpen={isAppointmentModalOpen} onClose={() => setIsAppointmentModalOpen(false)} onSave={handleAddAppointment} clickedTime={clickedTime} />
     </div>
   );
-};
-
-
-export default App;
+}

@@ -1,65 +1,39 @@
-import React, { useMemo } from "react";
+import React from "react";
+import { PieChart as RechartPieChart, Pie, Cell, Tooltip } from "recharts";
+import { ScheduledTask, CATEGORY_COLORS } from "../App";
 
-interface DataItem {
-  name: string;
-  value: number;
-  color: string;
+interface PieChartProps {
+  data: ScheduledTask[];
 }
 
-interface Props {
-  data: DataItem[];
-}
+export const PieChart: React.FC<PieChartProps> = ({ data }) => {
+  const aggregated = Object.entries(
+    data.reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + t.duration;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([name, value]) => ({ name, value }));
 
-const PieChart: React.FC<Props> = ({ data }) => {
-  const total = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
-  if (total === 0) {
-    return <div className="text-center text-gray-500">スケジュールを登録すると、ここにレポートが表示されます。</div>;
-  }
-
-  const radius = 50;
-  const circumference = 2 * Math.PI * radius;
-  let accumulatedAngle = 0;
-
-  const segments = data.map((item, index) => {
-    const percentage = item.value / total;
-    const rotation = accumulatedAngle * 360;
-    accumulatedAngle += percentage;
-
-    return (
-      <circle
-        key={index}
-        cx="60"
-        cy="60"
-        r={radius}
-        fill="transparent"
-        stroke="currentColor"
-        strokeWidth="20"
-        strokeDasharray={`${circumference}`}
-        strokeDashoffset={`${circumference * (1 - percentage)}`}
-        transform={`rotate(${rotation - 90} 60 60)`}
-        className={item.color}
-      />
-    );
-  });
+  if (aggregated.length === 0)
+    return <div className="text-center text-gray-500">データがありません</div>;
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-center p-4">
-      <svg viewBox="0 0 120 120" className="w-48 h-48">
-        {segments}
-      </svg>
-      <div className="mt-4 md:mt-0 md:ml-8">
-        <h3 className="font-bold mb-2">時間の使い方</h3>
-        <ul>
-          {data.map((item, index) => (
-            <li key={index} className="flex items-center mb-1">
-              <span className={`w-4 h-4 rounded-full mr-2 ${item.color}`}></span>
-              <span>{item.name}: {item.value}時間 ({((item.value / total) * 100).toFixed(1)}%)</span>
-            </li>
+    <div className="flex justify-center">
+      <RechartPieChart width={300} height={300}>
+        <Pie
+          data={aggregated}
+          cx="50%"
+          cy="50%"
+          outerRadius={120}
+          dataKey="value"
+          label
+        >
+          {aggregated.map((entry) => (
+            <Cell key={entry.name} fill={`var(--${CATEGORY_COLORS[entry.name]})`} />
           ))}
-        </ul>
-      </div>
+        </Pie>
+        <Tooltip />
+      </RechartPieChart>
     </div>
   );
 };
-
-export default PieChart;

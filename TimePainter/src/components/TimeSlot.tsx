@@ -1,44 +1,38 @@
 import React from "react";
-import { ScheduledTask } from "../types";
+import { CATEGORY_COLORS } from "../App";
+import { ScheduledTask } from "../App";
 
-interface Props {
+interface TimeSlotProps {
+  hour: string;
+  onDrop: () => void;
+  onClick: () => void;
   scheduledTasks: ScheduledTask[];
-  hour: number;
-  onDrop: (hour: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onTaskClick: (taskId: number) => void;
 }
 
-const TimeSlot: React.FC<Props> = ({ scheduledTasks, hour, onDrop, onDragOver, onTaskClick }) => {
-  const tasksInSlot = scheduledTasks.filter(st => {
-    const endHour = st.startHour + st.task.duration;
-    return hour >= st.startHour && hour < endHour;
-  });
+export const TimeSlot: React.FC<TimeSlotProps> = ({
+  hour,
+  onDrop,
+  onClick,
+  scheduledTasks,
+}) => {
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
   return (
     <div
-      onDrop={() => onDrop(hour)}
-      onDragOver={onDragOver}
-      className="relative border-t border-l border-gray-200 h-16 flex items-start"
+      onDrop={onDrop}
+      onDragOver={handleDragOver}
+      onClick={onClick}
+      className="relative h-16 border-b border-gray-300 hover:bg-gray-50 cursor-pointer"
     >
-      {tasksInSlot.map((scheduledTask) =>
-        scheduledTask.startHour === hour ? (
-          <div
-            key={scheduledTask.id}
-            onClick={() => onTaskClick(scheduledTask.id)}
-            className={`absolute w-full p-2 text-white rounded-lg opacity-90 shadow-md ${scheduledTask.task.color} z-10 cursor-pointer hover:opacity-100`}
-            style={{
-              height: `${scheduledTask.task.duration * 4}rem`,
-              top: 0,
-            }}
-          >
-            <p className="font-semibold text-sm">{scheduledTask.task.name}</p>
-            <p className="text-xs">{scheduledTask.task.category}</p>
-          </div>
-        ) : null
-      )}
+      <div className="absolute left-2 top-1 text-sm text-gray-500">{hour}</div>
+      {scheduledTasks.map((task) => (
+        <div
+          key={task.id}
+          className={`absolute left-20 right-2 top-1 bottom-1 rounded-lg text-white flex items-center px-2 text-sm ${CATEGORY_COLORS[task.category]}`}
+        >
+          {task.name}（{task.category}）
+        </div>
+      ))}
     </div>
   );
 };
-
-export default TimeSlot;

@@ -1,13 +1,13 @@
-export interface Task {
-  id: number;
+export type Task = {
+  id: string;
   name: string;
   category: string;
   color: string;
-  duration: number; // 時間（例: 1.5）
-}
+  duration: number;
+};
 
-export interface ScheduledTask {
-  id: number;
+export type ScheduledTask = {
+  id: string;
   task: Task;
   startHour: number;
-}
+};

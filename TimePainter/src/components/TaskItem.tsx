@@ -1,23 +1,44 @@
 import React from "react";
-import { Task } from "../types";
-import { CATEGORY_BORDERS } from "../constants";
+import { CATEGORY_COLORS } from "../App";
+import { Task } from "../App";
 
-interface Props {
+interface TaskItemProps {
   task: Task;
-  onDragStart: (e: React.DragEvent, task: Task) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onDragStart: () => void;
 }
 
-const TaskItem: React.FC<Props> = ({ task, onDragStart }) => {
+export const TaskItem: React.FC<TaskItemProps> = ({
+  task,
+  onEdit,
+  onDelete,
+  onDragStart,
+}) => {
   return (
     <div
+      className={`flex justify-between items-center p-2 rounded-lg text-white cursor-grab ${CATEGORY_COLORS[task.category]}`}
       draggable
-      onDragStart={(e) => onDragStart(e, task)}
-      className={`p-3 mb-2 rounded-lg shadow cursor-grab active:cursor-grabbing text-white ${task.color} border-b-4 ${CATEGORY_BORDERS[task.category]}`}
+      onDragStart={onDragStart}
     >
-      <p className="font-bold">{task.name}</p>
-      <p className="text-sm">{task.category} ({task.duration}時間)</p>
+      <div>
+        <div className="font-semibold">{task.name}</div>
+        <div className="text-sm">{task.category}・{task.duration}分</div>
+      </div>
+      <div className="flex gap-1">
+        <button
+          onClick={onEdit}
+          className="bg-white text-black text-xs px-2 py-1 rounded"
+        >
+          編集
+        </button>
+        <button
+          onClick={onDelete}
+          className="bg-white text-red-600 text-xs px-2 py-1 rounded"
+        >
+          削除
+        </button>
+      </div>
     </div>
   );
 };
-
-export default TaskItem;
