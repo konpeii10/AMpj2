@@ -1,13 +1,13 @@
-export type Task = {
-  id: string;
+export interface Task {
+  id: number;
   name: string;
   category: string;
   color: string;
-  duration: number;
-};
+  duration: number; // in hours
+}
 
-export type ScheduledTask = {
-  id: string;
+export interface ScheduledTask {
+  id: number; // unique id for the scheduled instance
   task: Task;
   startHour: number;
-};
+}
