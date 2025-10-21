@@ -64,9 +64,7 @@ const CurrentTimeIndicator: React.FC<{ date: Date }> = ({ date }) => {
       style={{ top: `${topPosition}rem`, transform: 'translateY(-50%)' }}
       aria-hidden="true"
     >
-      <div className="text-xs font-bold text-red-500 whitespace-nowrap bg-white pr-1">
-        {date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-      </div>
+      
       <div className="w-full h-0.5 bg-red-500"></div>
     </div>
   );
