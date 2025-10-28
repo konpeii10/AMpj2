@@ -218,7 +218,11 @@ const App = () => {
             <Report scheduledTasks={scheduledTasks} />
         </div>
       </div>
+      <footer className="text-center mb-8">
+        <p className="text-lg text-gray-600 pt-10">© 2025 Rio Kanehira</p>
+      </footer>
     </div>
+    
   );
 };
 

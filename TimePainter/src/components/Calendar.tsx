@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { areDatesEqual, isToday, formatDateKey } from '../utils';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronLeft, faChevronRight, faCalendarDay } from '@fortawesome/free-solid-svg-icons';
 
 interface CalendarProps {
     displayDate: Date;
@@ -35,12 +37,12 @@ export const Calendar: React.FC<CalendarProps> = ({ displayDate, setDisplayDate,
       setDisplayDate(today);
       setCalendarDate(today);
     }
-    
+    //色指定
     const getHeatmapColor = (count: number) => {
         if (count >= 7) return 'bg-red-500 text-white';
-        if (count >= 4) return 'bg-purple-500 text-white';
-        if (count >= 2) return 'bg-indigo-400 text-white';
-        if (count === 1) return 'bg-blue-300';
+        if (count >= 4) return 'bg-yellow-400 text-white';
+        if (count >= 2) return 'bg-green-600 text-white';
+        if (count === 1) return 'bg-blue-500 text-white';
         return '';
     };
 
@@ -77,9 +79,15 @@ export const Calendar: React.FC<CalendarProps> = ({ displayDate, setDisplayDate,
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">{calendarDate.getFullYear()}年 {calendarDate.getMonth() + 1}月</h3>
                 <div className="flex items-center space-x-2">
-                    <button onClick={handlePrevMonth} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">&lt;</button>
-                    <button onClick={handleGoToToday} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">今日</button>
-                    <button onClick={handleNextMonth} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">&gt;</button>
+                    <button onClick={handlePrevMonth} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                        <FontAwesomeIcon icon={faChevronLeft} />
+                    </button>
+                    <button onClick={handleGoToToday} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                        今日
+                    </button>
+                    <button onClick={handleNextMonth} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                        <FontAwesomeIcon icon={faChevronRight} />
+                    </button>
                 </div>
             </div>
             <div className="grid grid-cols-7 gap-1 text-center">
@@ -93,6 +101,8 @@ export const Calendar: React.FC<CalendarProps> = ({ displayDate, setDisplayDate,
                     const count = scheduledTaskCounts[dateKey] || 0;
                     const heatmapClass = getHeatmapColor(count);
 
+
+                    //色の条件分岐
                     return (
                         <div key={date.toString()} onClick={() => setDisplayDate(date)} className="relative p-1 cursor-pointer">
                             <span className={`

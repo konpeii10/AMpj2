@@ -1,6 +1,8 @@
 import { useMemo, useCallback } from 'react';
 import { generateHours, isToday } from '../utils';
 import { Task, ScheduledTask } from '../types';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronLeft, faChevronRight, faCalendarDay } from '@fortawesome/free-solid-svg-icons';
 
 interface TimeSlotProps {
     scheduledTasks: ScheduledTask[];
@@ -150,9 +152,13 @@ export const Timeline: React.FC<TimelineProps> = ({ displayDate, setDisplayDate,
       <div className="flex justify-between items-center mb-4 border-b pb-2 flex-shrink-0">
         <h2 className="text-2xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">タイムライン ({formattedDate})</h2>
         <div className="flex items-center space-x-2 flex-shrink-0">
-            <button onClick={handlePrevDay} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">&lt;</button>
+            <button onClick={handlePrevDay} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+              <FontAwesomeIcon icon={faChevronLeft} />
+            </button>
             <button onClick={handleGoToToday} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">今日</button>
-            <button onClick={handleNextDay} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">&gt;</button>
+            <button onClick={handleNextDay} className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+              <FontAwesomeIcon icon={faChevronRight} />
+            </button>
         </div>
       </div>
       <div className="relative overflow-y-auto h-[75vh]">

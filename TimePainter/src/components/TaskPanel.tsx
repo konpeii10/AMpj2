@@ -1,5 +1,7 @@
 import { CATEGORY_BORDERS } from '../utils';
 import { Task } from '../types';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPencil, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
 
 interface TaskItemProps {
     task: Task;
@@ -21,8 +23,12 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onDragStart, onEdit, onDelete
           <p className="text-sm">{task.category} ({task.duration}時間)</p>
         </div>
         <div className="flex-shrink-0">
-          <button onClick={() => onEdit(task)} className="p-1 rounded-full hover:bg-white/20 transition-colors mr-1">✏️</button>
-          <button onClick={() => onDelete(task.id)} className="p-1 rounded-full hover:bg-white/20 transition-colors">🗑️</button>
+          <button onClick={() => onEdit(task)} className="p-1 rounded-full hover:bg-white/20 transition-colors mr-1">
+            <FontAwesomeIcon icon={faPencil} />
+          </button>
+          <button onClick={() => onDelete(task.id)} className="p-1 rounded-full hover:bg-white/20 transition-colors">
+            <FontAwesomeIcon icon={faTrash} />
+          </button>
         </div>
       </div>
     </div>
