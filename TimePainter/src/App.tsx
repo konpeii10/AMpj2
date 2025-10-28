@@ -161,6 +161,8 @@ const App = () => {
       setScheduledTasks(prev => prev.filter(st => st.id !== taskId));
   }, []);
 
+  
+
   return (
     <div className="bg-gray-100 min-h-screen font-sans p-4 md:p-8">
       <AddTaskModal isOpen={isAddModalOpen} onSave={handleAddTask} onClose={() => setAddModalOpen(false)} />
