@@ -8,6 +8,8 @@ import { CATEGORY_COLORS, formatDateKey } from './utils';
 import { Task, ScheduledTask } from './types';
 
 const App = () => {
+  const [displayDate, setDisplayDate] = useState(new Date());
+
   const [tasks, setTasks] = useState<Task[]>(() => {
     const savedTasks = localStorage.getItem('timePainterTasks');
     return savedTasks ? JSON.parse(savedTasks) : [
@@ -17,7 +19,12 @@ const App = () => {
     ];
   });
   
-  const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
+  const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>(() => {
+    const dateKey = formatDateKey(displayDate); // 先に初期化した displayDate を使用
+    const saved = localStorage.getItem(`timePainterScheduled-${dateKey}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
 
   const [isAddModalOpen, setAddModalOpen] = useState(false);
@@ -27,7 +34,7 @@ const App = () => {
   const [isAppointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [newAppointmentHour, setNewAppointmentHour] = useState<number | null>(null);
 
-  const [displayDate, setDisplayDate] = useState(new Date());
+  
   const [currentTime, setCurrentTime] = useState(new Date());
   
   const [scheduledTaskCounts, setScheduledTaskCounts] = useState<{ [key: string]: number }>({});
