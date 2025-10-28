@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { CATEGORY_COLORS } from '../utils';
-import { Task } from '../types';
+import { Task, TaskType } from '../types';
 
 interface AddTaskModalProps {
     isOpen: boolean;
-    onSave: (taskData: Omit<Task, 'id' | 'color'>) => void;
+    onSave: (taskData: Omit<Task, 'id' | 'color' | 'isCompleted'>) => void;
     onClose: () => void;
 }
 
@@ -15,6 +15,11 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onSave, onCl
     const [category, setCategory] = useState("学習");
     const [duration, setDuration] = useState(1);
 
+    const [taskType, setTaskType] = useState<TaskType>('one-off');
+    const [deadline, setDeadline] = useState(""); // datetime-local の値 (YYYY-MM-DDTHH:MM)
+    const [recurringDay, setRecurringDay] = useState(0); // 0=日曜
+    const [recurringTime, setRecurringTime] = useState("09:00"); // HH:MM
+
     const handleSave = () => {
         if (!name.trim()) {
             alert("タスク名を入力してください。");
@@ -24,14 +29,33 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onSave, onCl
             alert("時間を正しく入力してください。");
             return;
         }
-        onSave({ name, category, duration });
+
+        const taskData: Omit<Task, 'id' | 'color' | 'isCompleted'> = {
+            name,
+            category,
+            duration,
+            taskType,
+            deadline: taskType === 'one-off' ? deadline : null,
+            recurringDay: taskType === 'recurring' ? recurringDay : null,
+            recurringTime: taskType === 'recurring' ? recurringTime : null,
+        };
+        onSave(taskData);
         onClose();
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        handleSave();
     };
 
     const handleClose = () => {
         setName("");
         setCategory("学習");
         setDuration(1);
+        setTaskType('one-off');
+        setDeadline("");
+        setRecurringDay(0);
+        setRecurringTime("09:00");
         onClose();
     };
 
@@ -45,10 +69,66 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onSave, onCl
                         {Object.keys(CATEGORY_COLORS).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                     <input type="number" value={duration} onChange={(e) => setDuration(parseFloat(e.target.value) || 0)} step="0.25" min="0.25" className="w-full p-2 border rounded" placeholder="時間 (例: 1.5)" />
+
+                    <div className="flex gap-4">
+                        <label className="flex items-center">
+                            <input type="radio" value="one-off" checked={taskType === 'one-off'} onChange={() => setTaskType('one-off')} className="mr-2"/>
+                            単発
+                        </label>
+                        <label className="flex items-center">
+                            <input type="radio" value="recurring" checked={taskType === 'recurring'} onChange={() => setTaskType('recurring')} className="mr-2"/>
+                            定期
+                        </label>
+                    </div>
+
+                    {/* 単発タスク用の入力 */}
+                    {taskType === 'one-off' && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">締め切り日時</label>
+                            <input 
+                                type="datetime-local" 
+                                value={deadline} 
+                                onChange={(e) => setDeadline(e.target.value)} 
+                                className="w-full p-2 border rounded mt-1" 
+                            />
+                        </div>
+                    )}
+
+                    {/* 定期タスク用の入力 */}
+                    {taskType === 'recurring' && (
+                        <div className="flex gap-4">
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium text-gray-700">曜日</label>
+                                <select value={recurringDay} onChange={(e) => setRecurringDay(Number(e.target.value))} className="w-full p-2 border rounded mt-1">
+                                    <option value={0}>日曜日</option>
+                                    <option value={1}>月曜日</option>
+                                    <option value={2}>火曜日</option>
+                                    <option value={3}>水曜日</option>
+                                    <option value={4}>木曜日</option>
+                                    <option value={5}>金曜日</option>
+                                    <option value={6}>土曜日</option>
+                                </select>
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium text-gray-700">時間</label>
+                                <input 
+                                    type="time" 
+                                    value={recurringTime} 
+                                    onChange={(e) => setRecurringTime(e.target.value)} 
+                                    className="w-full p-2 border rounded mt-1" 
+                                />
+                            </div>
+                        </div>
+                    )}
+
+
+
+
+
                 </div>
                 <div className="mt-6 flex justify-end space-x-3">
                     <button onClick={handleClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">キャンセル</button>
-                    <button onClick={handleSave} className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600">追加</button>
+                    <button type ="submit" onClick={handleSave} className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600">追加</button>
                 </div>
             </div>
         </div>
@@ -179,6 +259,11 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({ isOpen
                         </div>
                     </div>
                 </div>
+
+
+
+
+
                 <div className="mt-6 flex justify-end space-x-3">
                     <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">キャンセル</button>
                     <button onClick={handleSave} className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600">保存</button>
@@ -229,11 +314,14 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, task, onSa
                 <h3 className="text-xl font-bold mb-4">タスクの編集</h3>
                 <div className="space-y-4">
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-2 border rounded" placeholder="タスク名" />
+                    
                     <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-2 border rounded">
                         {Object.keys(CATEGORY_COLORS).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                     <input type="number" value={duration} onChange={(e) => setDuration(parseFloat(e.target.value) || 0)} step="0.5" min="0.5" className="w-full p-2 border rounded" placeholder="時間 (例: 1.5)" />
                 </div>
+
+                
                 <div className="mt-6 flex justify-end space-x-3">
                     <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">キャンセル</button>
                     <button onClick={handleSave} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">保存</button>

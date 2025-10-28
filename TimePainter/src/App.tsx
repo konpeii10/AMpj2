@@ -5,18 +5,21 @@ import { Timeline } from './components/Timeline';
 import { Report } from './components/Report';
 import { AddTaskModal, EditTaskModal, AddAppointmentModal } from './components/Modals';
 import { CATEGORY_COLORS, formatDateKey } from './utils';
-import { Task, ScheduledTask } from './types';
+import { Task, ScheduledTask, TaskType } from './types';
 
 const App = () => {
   const [displayDate, setDisplayDate] = useState(new Date());
 
   const [tasks, setTasks] = useState<Task[]>(() => {
     const savedTasks = localStorage.getItem('timePainterTasks');
+
     return savedTasks ? JSON.parse(savedTasks) : [
-      { id: 1, name: "Reactの学習", category: "学習", color: CATEGORY_COLORS["学習"], duration: 3 },
-      { id: 2, name: "プレゼン資料作成", category: "仕事", color: CATEGORY_COLORS["仕事"], duration: 2 },
-      { id: 3, name: "ジムでトレーニング", category: "運動", color: CATEGORY_COLORS["運動"], duration: 1 },
+      { 
+        id: 1, name: "Reactの学習", category: "学習", color: CATEGORY_COLORS["学習"], duration: 3, 
+        taskType: 'one-off' as TaskType, deadline: null, isCompleted: false, recurringDay: null, recurringTime: null 
+      },
     ];
+
   });
   
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>(() => {
@@ -91,7 +94,13 @@ const App = () => {
         category: taskData.category,
         color: CATEGORY_COLORS[taskData.category],
         duration: taskData.duration,
+        taskType: taskData.taskType,
+        deadline: taskData.deadline,
+        recurringDay: taskData.recurringDay,
+        recurringTime: taskData.recurringTime,
+        isCompleted: false // 新規タスクは必ず未完了
     };
+
     setTasks(prev => [...prev, newTask]);
   };
   
@@ -104,6 +113,7 @@ const App = () => {
         category,
         color: CATEGORY_COLORS[category],
         duration,
+        
     };
     
     const newScheduledTask: ScheduledTask = {
@@ -144,6 +154,14 @@ const App = () => {
   const handleDeleteTask = (taskId: number) => {
     setTasks(prev => prev.filter(task => task.id !== taskId));
     setScheduledTasks(prev => prev.filter(st => st.task.id !== taskId));
+  };
+
+  const handleToggleComplete = (taskId: number) => {
+    setTasks(prevTasks =>
+      prevTasks.map(task =>
+        task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task
+      )
+    );
   };
 
   const openEditModal = (task: Task) => {
@@ -199,6 +217,10 @@ const App = () => {
             onEdit={openEditModal}
             onDelete={handleDeleteTask}
             onAddTask={() => setAddModalOpen(true)}
+            // --- ▼ onToggleComplete を TaskPanel に渡す ---
+            onToggleComplete={handleToggleComplete}
+            // --- ▲ onToggleComplete を TaskPanel に渡す ---
+            
           />
         </div>
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg flex flex-col">
