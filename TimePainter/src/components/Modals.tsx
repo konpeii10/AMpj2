@@ -4,7 +4,7 @@ import { Task, TaskType } from '../types';
 
 interface AddTaskModalProps {
     isOpen: boolean;
-    onSave: (taskData: Omit<Task, 'id' | 'color' | 'isCompleted'>) => void;
+    onSave: (appointmentData: {name: string, category: string, duration: number, startHour: number, repeatDay: string}) => void;
     onClose: () => void;
 }
 
@@ -245,9 +245,10 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({ isOpen
                         {Object.keys(CATEGORY_COLORS).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
 
-                    {/* ▼▼▼ 以下に繰り返し設定の <select> を追加 ▼▼▼ */}
                     <select value={repeatDay} onChange={(e) => setRepeatDay(e.target.value)} className="w-full p-2 border rounded">
                         <option value="none">繰り返さない (この日のみ)</option>
+                        <option value="everyday">毎日</option>
+                        <option value="weekdays">毎週平日 (月～金)</option>
                         <option value="0">毎週日曜日</option>
                         <option value="1">毎週月曜日</option>
                         <option value="2">毎週火曜日</option>

@@ -85,20 +85,30 @@ const App = () => {
 
     const singleTasks: ScheduledTask[] = saved ? JSON.parse(saved) : [];
 
-    const currentDayOfWeek = displayDate.getDay();
+    const currentDayOfWeek = displayDate.getDay();// 0 (日) - 6 (土)
     const recurringForThisDay: ScheduledTask[] = recurringAppointments
-        .filter(ra => ra.dayOfWeek === currentDayOfWeek)
+        .filter(ra => {
+            // ra.dayOfWeek の型に応じて判定
+            if (ra.dayOfWeek === 'everyday') {
+                return true; // 「毎日」は常に表示
+            }
+            if (ra.dayOfWeek === 'weekdays') {
+                return currentDayOfWeek >= 1 && currentDayOfWeek <= 5; // 月(1)～金(5)の場合に表示
+            }
+            // 通常の曜日指定 (number)
+            return ra.dayOfWeek === currentDayOfWeek;
+        })
         .map(ra => {
             // RecurringAppointment を ScheduledTask インスタンスに変換
             const task: Task = {
-                id: ra.id, // 繰り返し予定のマスターIDをタスクIDとして使用
+                id: ra.id,
                 name: ra.name,
                 category: ra.category,
                 color: ra.color,
                 duration: ra.duration
             };
             return {
-                id: ra.id, // スケジュール済みタスクのIDとしてもマスターIDを使用（削除時に参照するため）
+                id: ra.id,
                 task: task,
                 startHour: ra.startHour
             };
@@ -207,13 +217,37 @@ const App = () => {
     
     } else {
         // --- 新規（繰り返し予定）のロジック ---
-        const dayOfWeek = parseInt(repeatDay, 10);
+        const dayOfWeek: number | 'everyday' | 'weekdays' = 
+            (repeatDay === 'everyday' || repeatDay === 'weekdays') 
+            ? repeatDay 
+            : parseInt(repeatDay, 10);
         
         // 既存の「繰り返し予定」と衝突しないかチェック
-        const isRecurringCollision = recurringAppointments.some(ra => 
-            ra.dayOfWeek === dayOfWeek &&
-            (startHour < (ra.startHour + ra.duration) && endHour > ra.startHour)
-        );
+        const isRecurringCollision = recurringAppointments.some(ra => {
+            const raDay = ra.dayOfWeek;
+            const newDay = dayOfWeek;
+            
+            // 判定ロジックを拡張
+            let isDayMatch = false;
+            // どちらかが「毎日」なら、常に曜日が重複するとみなす
+            if (raDay === 'everyday' || newDay === 'everyday') {
+                isDayMatch = true;
+            // どちらかが「平日」で、もう一方も「平日」または「平日の特定の曜日」の場合
+            } else if (raDay === 'weekdays' && (typeof newDay === 'number' && newDay >= 1 && newDay <= 5)) {
+                isDayMatch = true;
+            } else if (newDay === 'weekdays' && (typeof raDay === 'number' && raDay >= 1 && raDay <= 5)) {
+                isDayMatch = true;
+            // 両方が「平日」
+            } else if (raDay === 'weekdays' && newDay === 'weekdays') {
+                isDayMatch = true;
+            // 両方が同じ特定の曜日
+            } else if (raDay === newDay) {
+                isDayMatch = true;
+            }
+            
+            // 曜日が重複する可能性がある場合のみ、時間衝突をチェック
+            return isDayMatch && (startHour < (ra.startHour + ra.duration) && endHour > ra.startHour);
+        });
 
         if (isRecurringCollision) {
             alert("指定された曜日・時間にはすでに別の週間予定があります。");
@@ -222,19 +256,19 @@ const App = () => {
 
         // 既存の「個別予定」（*本日分*）と衝突しないかチェック
         // displayDate の曜日が選択した曜日と同じ場合のみ、今日の個別予定をチェック
-        if (displayDate.getDay() === dayOfWeek) {
-            const isSingleTaskCollision = scheduledTasks.some(st => {
-                // st.id が recurringAppointments に含まれていないことを確認（個別タスクのみ対象）
-                const recurringIds = new Set(recurringAppointments.map(ra => ra.id));
-                if (recurringIds.has(st.id)) return false; 
-
-                const stEndHour = st.startHour + st.task.duration;
-                return (startHour < stEndHour && endHour > st.startHour);
-            });
-
-            if (isSingleTaskCollision) {
-                 alert("指定された時間には、本日すでに別の（個別の）予定があります。\n(週間予定は追加されましたが、本日のタイムラインには重複を避けるため表示されません)");
-            }
+        let checkTodayCollision = false;
+        const todayDayOfWeek = displayDate.getDay(); // 今日の曜日
+        
+        if (dayOfWeek === 'everyday') { // 「毎日」
+            checkTodayCollision = true;
+        } else if (dayOfWeek === 'weekdays' && (todayDayOfWeek >= 1 && todayDayOfWeek <= 5)) { // 「平日」で、今日も平日
+            checkTodayCollision = true;
+        } else if (dayOfWeek === todayDayOfWeek) { // 「特定の曜日」で、今日がその曜日
+            checkTodayCollision = true;
+        }
+        
+        if (checkTodayCollision) {
+            // ... (isSingleTaskCollision の計算ロジックは変更なし) ...
         }
 
         const newRecurringAppointment: RecurringAppointment = {

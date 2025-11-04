@@ -41,5 +41,5 @@ export interface RecurringAppointment {
   color: string;
   duration: number;
   startHour: number;
-  dayOfWeek: number; // 0 (日曜日) - 6 (土曜日)
+  dayOfWeek: number | 'everyday' | 'weekdays'; // 0-6 (特定の曜日), 'everyday', 'weekdays'
 }
