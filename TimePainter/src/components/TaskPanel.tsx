@@ -121,38 +121,39 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ tasks, onDragStart, onEdit
           <h2 className="text-2xl font-bold">タスクリスト</h2>
           <button onClick={onAddTask} className="bg-indigo-500 text-white px-3 py-1 rounded-lg hover:bg-indigo-600 transition-colors text-lg font-bold">+</button>
       </div>
-      
-      {/* --- ▼ 表示を単発と定期に分離 (要求2) --- */}
-      <div>
-        <h3 className="text-xl font-semibold mb-2 border-b pb-1">単発タスク</h3>
-        {oneOffTasks.length > 0 ? oneOffTasks.map(task => (
-          <TaskItem 
-            key={task.id} 
-            task={task} 
-            onDragStart={onDragStart} 
-            onEdit={onEdit} 
-            onDelete={onDelete} 
-            onToggleComplete={onToggleComplete} // 渡す
-          />
-        )) : (
-          <p className="text-gray-500 text-center py-2">単発タスクはありません。</p>
-        )}
-      </div>
-      
-      <div className="mt-6">
-        <h3 className="text-xl font-semibold mb-2 border-b pb-1">定期タスク</h3>
-        {recurringTasks.length > 0 ? recurringTasks.map(task => (
-          <TaskItem 
-            key={task.id} 
-            task={task} 
-            onDragStart={onDragStart} 
-            onEdit={onEdit} 
-            onDelete={onDelete} 
-            onToggleComplete={onToggleComplete} // 渡す
-          />
-        )) : (
-          <p className="text-gray-500 text-center py-2">定期タスクはありません。</p>
-        )}
+      <div className="max-h-64 overflow-y-auto">
+        {/* --- ▼ 表示を単発と定期に分離 (要求2) --- */}
+        <div>
+          <h3 className="text-xl font-semibold mb-2 border-b pb-1">単発タスク</h3>
+          {oneOffTasks.length > 0 ? oneOffTasks.map(task => (
+            <TaskItem 
+              key={task.id} 
+              task={task} 
+              onDragStart={onDragStart} 
+              onEdit={onEdit} 
+              onDelete={onDelete} 
+              onToggleComplete={onToggleComplete} // 渡す
+            />
+          )) : (
+            <p className="text-gray-500 text-center py-2">単発タスクはありません。</p>
+          )}
+        </div>
+        
+        <div className="mt-6">
+          <h3 className="text-xl font-semibold mb-2 border-b pb-1">定期タスク</h3>
+          {recurringTasks.length > 0 ? recurringTasks.map(task => (
+            <TaskItem 
+              key={task.id} 
+              task={task} 
+              onDragStart={onDragStart} 
+              onEdit={onEdit} 
+              onDelete={onDelete} 
+              onToggleComplete={onToggleComplete} // 渡す
+            />
+          )) : (
+            <p className="text-gray-500 text-center py-2">定期タスクはありません。</p>
+          )}
+        </div>
       </div>
       {/* --- ▲ 表示を単発と定期に分離 (要求2) --- */}
 

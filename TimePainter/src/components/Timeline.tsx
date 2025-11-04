@@ -161,7 +161,7 @@ export const Timeline: React.FC<TimelineProps> = ({ displayDate, setDisplayDate,
             </button>
         </div>
       </div>
-      <div className="relative overflow-y-auto h-[75vh]">
+      <div className="relative overflow-y-auto h-[80vh]">
          {isToday(displayDate) && <CurrentTimeIndicator date={currentTime} />}
          <div className="grid" style={{ gridTemplateRows: `repeat(${hours.length}, 4rem)` }}>
            {hours.map((time, index) => (
