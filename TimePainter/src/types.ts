@@ -33,3 +33,13 @@ export interface ScheduledTask {
   task: Task;
   startHour: number;
 }
+
+export interface RecurringAppointment {
+  id: number;
+  name: string;
+  category: string;
+  color: string;
+  duration: number;
+  startHour: number;
+  dayOfWeek: number; // 0 (日曜日) - 6 (土曜日)
+}
