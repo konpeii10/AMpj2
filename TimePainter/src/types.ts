@@ -18,6 +18,16 @@ export interface Task {
   // --- ▲ 追加する項目 ---
 }
 
+export interface RecurringAppointment {
+  id: number;
+  name: string;
+  category: string;
+  color: string;
+  duration: number;
+  startHour: number;
+  dayOfWeek: number | 'everyday' | 'weekdays'; // 0-6 (特定の曜日), 'everyday', 'weekdays'
+}
+
 export interface ScheduledTask {
   id: number; // unique id for the scheduled instance
   task: Task;

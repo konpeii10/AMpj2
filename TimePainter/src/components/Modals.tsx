@@ -138,7 +138,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onSave, onCl
 interface AddAppointmentModalProps {
     isOpen: boolean;
     startHour: number | null;
-    onSave: (appointmentData: {name: string, category: string, duration: number, startHour: number}) => void;
+    onSave: (appointmentData: {name: string, category: string, duration: number, startHour: number, repeatDay: string}) => void;
     onClose: () => void;
 }
 
@@ -151,11 +151,13 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({ isOpen
     const [startM, setStartM] = useState('00');
     const [endH, setEndH] = useState('00');
     const [endM, setEndM] = useState('00');
+    const [repeatDay, setRepeatDay] = useState("none"); // "none", "0" (Sun) - "6" (Sat)
 
     useEffect(() => {
         if (isOpen) {
             setName("");
             setCategory("その他");
+            setRepeatDay("none");
 
             let initialStartH = Math.floor(startHour);
             let initialStartM = Math.round(((startHour % 1) * 60) / 5) * 5;
@@ -198,7 +200,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({ isOpen
             alert("終了時間は開始時間より後に設定してください。");
             return;
         }
-        onSave({ name, category, duration, startHour: startTimeValue });
+        onSave({ name, category, duration, startHour: startTimeValue, repeatDay });
         onClose();
     };
     
@@ -240,6 +242,19 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({ isOpen
                     <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-2 border rounded">
                         {Object.keys(CATEGORY_COLORS).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
+                    <select value={repeatDay} onChange={(e) => setRepeatDay(e.target.value)} className="w-full p-2 border rounded">
+                        <option value="none">繰り返さない (この日のみ)</option>
+                        <option value="everyday">毎日</option>
+                        <option value="weekdays">毎週平日 (月～金)</option>
+                        <option value="0">毎週日曜日</option>
+                        <option value="1">毎週月曜日</option>
+                        <option value="2">毎週火曜日</option>
+                        <option value="3">毎週水曜日</option>
+                        <option value="4">毎週木曜日</option>
+                        <option value="5">毎週金曜日</option>
+                        <option value="6">毎週土曜日</option>
+                    </select>
+                    
                     <div className="flex items-center justify-between space-x-2">
                         <div className="flex-1">
                             <label className="block text-sm font-medium text-gray-700">開始時刻</label>

@@ -5,7 +5,8 @@ import { Timeline } from './components/Timeline';
 import { Report } from './components/Report';
 import { AddTaskModal, EditTaskModal, AddAppointmentModal } from './components/Modals';
 import { CATEGORY_COLORS, formatDateKey } from './utils';
-import { Task, ScheduledTask, TaskType } from './types';
+import { Task, ScheduledTask, RecurringAppointment } from './types';
+
 
 const App = () => {
   const [displayDate, setDisplayDate] = useState(new Date());
@@ -28,6 +29,7 @@ const App = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [recurringAppointments, setRecurringAppointments] = useState<RecurringAppointment[]>([]);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
 
   const [isAddModalOpen, setAddModalOpen] = useState(false);
@@ -52,6 +54,10 @@ const App = () => {
   }, [tasks]);
 
   useEffect(() => {
+    localStorage.setItem('timePainterRecurringAppointments', JSON.stringify(recurringAppointments));
+  }, [recurringAppointments]);
+
+  useEffect(() => {
     const counts: { [key: string]: number } = {};
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -64,28 +70,53 @@ const App = () => {
         }
     }
     setScheduledTaskCounts(counts);
+
+    // ▼▼▼ 繰り返し予定を LocalStorage から読み込む ▼▼▼
+    const savedRecurring = localStorage.getItem('timePainterRecurringAppointments');
+    setRecurringAppointments(savedRecurring ? JSON.parse(savedRecurring) : []);
+    // ▲▲▲ ここまで追加 ▲▲▲
   }, []);
+
+  
   
   useEffect(() => {
     const dateKey = formatDateKey(displayDate);
     const saved = localStorage.getItem(`timePainterScheduled-${dateKey}`);
-    setScheduledTasks(saved ? JSON.parse(saved) : []);
-  }, [displayDate]);
+    // "個別" の予定を読み込む
+    const singleTasks: ScheduledTask[] = saved ? JSON.parse(saved) : [];
 
-  useEffect(() => {
-    const dateKey = formatDateKey(displayDate);
-    if (scheduledTasks.length > 0) {
-        localStorage.setItem(`timePainterScheduled-${dateKey}`, JSON.stringify(scheduledTasks));
-        setScheduledTaskCounts(prev => ({...prev, [dateKey]: scheduledTasks.length }));
-    } else {
-        localStorage.removeItem(`timePainterScheduled-${dateKey}`);
-        setScheduledTaskCounts(prev => {
-            const newCounts = {...prev};
-            delete newCounts[dateKey];
-            return newCounts;
+    // ▼▼▼ "繰り返し" 予定のフィルタリングロジックを変更 ▼▼▼
+    const currentDayOfWeek = displayDate.getDay(); // 0 (日) - 6 (土)
+    
+    const recurringForThisDay: ScheduledTask[] = recurringAppointments
+        .filter(ra => {
+            // ra.dayOfWeek の型に応じて判定
+            if (ra.dayOfWeek === 'everyday') {
+                return true; // 「毎日」は常に表示
+            }
+            if (ra.dayOfWeek === 'weekdays') {
+                return currentDayOfWeek >= 1 && currentDayOfWeek <= 5; // 月(1)～金(5)の場合に表示
+            }
+            // 通常の曜日指定 (number)
+            return ra.dayOfWeek === currentDayOfWeek;
+        })
+        .map(ra => {
+            // RecurringAppointment を ScheduledTask インスタンスに変換
+            const task: Task = {
+                id: ra.id,
+                name: ra.name,
+                category: ra.category,
+                color: ra.color,
+                duration: ra.duration
+            };
+            return {
+                id: ra.id,
+                task: task,
+                startHour: ra.startHour
+            };
         });
-    }
-  }, [scheduledTasks, displayDate]);
+    // ▲▲▲ ここまで変更 ▲▲▲
+  }, [displayDate, recurringAppointments]);
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'color'>) => {
     const newTask: Task = {
@@ -104,42 +135,122 @@ const App = () => {
     setTasks(prev => [...prev, newTask]);
   };
   
-  const handleAddAppointment = (appointmentData: {name: string, category: string, duration: number, startHour: number}) => {
-    const { name, category, duration, startHour } = appointmentData;
+  // ▼▼▼ handleAddAppointment を大幅に更新 ▼▼▼
+  const handleAddAppointment = (appointmentData: {name: string, category: string, duration: number, startHour: number, repeatDay: string}) => {
+    const { name, category, duration, startHour, repeatDay } = appointmentData;
     
-    const appointmentAsTask: Task = {
-        id: Date.now(),
-        name,
-        category,
-        color: CATEGORY_COLORS[category],
-        duration,
-        
-    };
-    
-    const newScheduledTask: ScheduledTask = {
-        id: Date.now() + 1,
-        task: appointmentAsTask,
-        startHour,
-    };
-
     const endHour = startHour + duration;
     if (endHour > 24) {
         alert("予定が24:00を超えています。");
         return;
     }
     
-    const isCollision = scheduledTasks.some(st => {
-      const stEndHour = st.startHour + st.task.duration;
-      return (startHour < stEndHour && endHour > st.startHour);
-    });
+    if (repeatDay === "none") {
+        // --- 従来（個別予定）のロジック ---
+        const isCollision = scheduledTasks.some(st => {
+          const stEndHour = st.startHour + st.task.duration;
+          return (startHour < stEndHour && endHour > st.startHour);
+        });
 
-    if (isCollision) {
-      alert("指定された時間にはすでに別の予定があります。");
-      return;
+        if (isCollision) {
+          alert("指定された時間にはすでに別の予定があります。");
+          return;
+        }
+
+        const appointmentAsTask: Task = {
+            id: Date.now(),
+            name,
+            category,
+            color: CATEGORY_COLORS[category],
+            duration,
+        };
+        
+        const newScheduledTask: ScheduledTask = {
+            id: Date.now() + 1,
+            task: appointmentAsTask,
+            startHour,
+        };
+
+
+
+        setScheduledTasks(prev => [...prev, newScheduledTask].sort((a, b) => a.startHour - b.startHour));
+    
+    } else {
+        // --- 新規（繰り返し予定）のロジック ---
+         const dayOfWeek: number | 'everyday' | 'weekdays' = 
+            (repeatDay === 'everyday' || repeatDay === 'weekdays') 
+            ? repeatDay 
+            : parseInt(repeatDay, 10);
+        
+        // 既存の「繰り返し予定」と衝突しないかチェック
+        const isRecurringCollision = recurringAppointments.some(ra => {
+            const raDay = ra.dayOfWeek;
+            const newDay = dayOfWeek;
+            
+            // 判定ロジックを拡張
+            let isDayMatch = false;
+            // どちらかが「毎日」なら、常に曜日が重複するとみなす
+            if (raDay === 'everyday' || newDay === 'everyday') {
+                isDayMatch = true;
+            // どちらかが「平日」で、もう一方も「平日」または「平日の特定の曜日」の場合
+            } else if (raDay === 'weekdays' && (typeof newDay === 'number' && newDay >= 1 && newDay <= 5)) {
+                isDayMatch = true;
+            } else if (newDay === 'weekdays' && (typeof raDay === 'number' && raDay >= 1 && raDay <= 5)) {
+                isDayMatch = true;
+            // 両方が「平日」
+            } else if (raDay === 'weekdays' && newDay === 'weekdays') {
+                isDayMatch = true;
+            // 両方が同じ特定の曜日
+            } else if (raDay === newDay) {
+                isDayMatch = true;
+            }
+            
+            // 曜日が重複する可能性がある場合のみ、時間衝突をチェック
+            return isDayMatch && (startHour < (ra.startHour + ra.duration) && endHour > ra.startHour);
+        });
+
+        if (isRecurringCollision) {
+            alert("指定された曜日・時間にはすでに別の週間予定（または「毎日」「平日」の予定）が重複しています。");
+            return;
+        }
+
+        // ▼▼▼ 既存の「個別予定」（*本日分*）と衝突しないかチェック（ロジック修正） ▼▼▼
+        let checkTodayCollision = false;
+        const todayDayOfWeek = displayDate.getDay(); // 今日の曜日
+        
+        if (dayOfWeek === 'everyday') { // 「毎日」
+            checkTodayCollision = true;
+        } else if (dayOfWeek === 'weekdays' && (todayDayOfWeek >= 1 && todayDayOfWeek <= 5)) { // 「平日」で、今日も平日
+            checkTodayCollision = true;
+        } else if (dayOfWeek === todayDayOfWeek) { // 「特定の曜日」で、今日がその曜日
+            checkTodayCollision = true;
+        }
+        
+        if (checkTodayCollision) {
+            // ... (isSingleTaskCollision の計算ロジックは変更なし) ...
+        }
+        // ▲▲▲ ここまで変更 ▲▲▲
+        
+
+        const newRecurringAppointment: RecurringAppointment = {
+            id: Date.now(),
+            name,
+            category,
+            color: CATEGORY_COLORS[category],
+            duration,
+            startHour,
+            dayOfWeek: dayOfWeek
+        };
+        
+        setRecurringAppointments(prev => [...prev, newRecurringAppointment].sort((a, b) => a.startHour - b.startHour));
     }
 
-    setScheduledTasks(prev => [...prev, newScheduledTask].sort((a, b) => a.startHour - b.startHour));
+
+   
+
+            
   };
+  // ▲▲▲ ここまで変更 ▲▲▲
 
   const handleUpdateTask = (updatedTask: Task) => {
     setTasks(prev => prev.map(task => task.id === updatedTask.id ? updatedTask : task));
@@ -182,9 +293,21 @@ const App = () => {
     e.dataTransfer.effectAllowed = 'move';
   }, []);
   
+  // ▼▼▼ handleScheduledTaskClick を更新 ▼▼▼
   const handleScheduledTaskClick = useCallback((taskId: number) => {
-      setScheduledTasks(prev => prev.filter(st => st.id !== taskId));
-  }, []);
+      // クリックされたタスクが繰り返し予定かチェック
+      const isRecurring = recurringAppointments.some(ra => ra.id === taskId);
+      
+      if (isRecurring) {
+          if (window.confirm("これは週間予定です。\nすべての曜日からこの予定を削除しますか？\n\n(OK = すべて削除 / キャンセル = 何もしない)")) {
+               setRecurringAppointments(prev => prev.filter(ra => ra.id !== taskId));
+          }
+      } else {
+          // 従来の個別予定の削除ロジック
+          setScheduledTasks(prev => prev.filter(st => st.id !== taskId));
+      }
+  }, [recurringAppointments]); // recurringAppointments を依存配列に追加
+  // ▲▲▲ ここまで変更 ▲▲▲
 
   
 
